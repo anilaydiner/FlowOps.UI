@@ -13,7 +13,7 @@ export interface paths {
         };
         /** Get workflow by ID (with ordered steps) */
         get: operations["get"];
-        /** Update workflow and its steps (admin only) */
+        /** Update workflow and its steps */
         put: operations["update"];
         post?: never;
         delete?: never;
@@ -47,11 +47,11 @@ export interface paths {
         };
         /** Get role by ID */
         get: operations["get_2"];
-        /** Update role (admin only) */
+        /** Update role */
         put: operations["update_2"];
         post?: never;
         /**
-         * Delete role (admin only)
+         * Delete role
          * @description Built-in roles (ADMIN, MEMBER) cannot be deleted.
          */
         delete: operations["delete_1"];
@@ -114,7 +114,7 @@ export interface paths {
         };
         /** Get request type by ID */
         get: operations["get_4"];
-        /** Update request type (admin only) */
+        /** Update request type */
         put: operations["update_3"];
         post?: never;
         delete?: never;
@@ -143,7 +143,7 @@ export interface paths {
          */
         get: operations["list"];
         put?: never;
-        /** Create workflow (admin only) */
+        /** Create workflow */
         post: operations["create"];
         delete?: never;
         options?: never;
@@ -207,7 +207,7 @@ export interface paths {
          */
         get: operations["list_2"];
         put?: never;
-        /** Create role (admin only) */
+        /** Create role */
         post: operations["create_2"];
         delete?: never;
         options?: never;
@@ -387,7 +387,7 @@ export interface paths {
          */
         get: operations["list_5"];
         put?: never;
-        /** Create request type (admin only) */
+        /** Create request type */
         post: operations["create_3"];
         delete?: never;
         options?: never;
@@ -405,6 +405,40 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set a new password using a reset token */
+        post: operations["resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request a password-reset email (always 202) */
+        post: operations["forgotPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -453,6 +487,30 @@ export interface paths {
             cookie?: never;
         };
         get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{id}/eligible-delegatees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List users eligible to receive a delegation of this decision
+         * @description Only the current approver may call this (403 otherwise). Returns active
+         *     users who would pass the same approval gate — i.e. who can actually act on
+         *     this request. The caller and the requester are excluded. Scoped permissions
+         *     (type / department / threshold) are honoured, so a user whose scope does not
+         *     match this request is not listed.
+         */
+        get: operations["eligibleDelegatees"];
         put?: never;
         post?: never;
         delete?: never;
@@ -923,6 +981,14 @@ export interface components {
             /** Format: int64 */
             expiresIn?: number;
         };
+        ResetPasswordRequest: {
+            token: string;
+            newPassword: string;
+        };
+        ForgotPasswordRequest: {
+            /** Format: email */
+            email: string;
+        };
         NotificationResponse: {
             /** Format: int64 */
             id?: number;
@@ -994,6 +1060,13 @@ export interface components {
             totalPages?: number;
             first?: boolean;
             last?: boolean;
+        };
+        EligibleDelegateeResponse: {
+            /** Format: int64 */
+            id?: number;
+            username?: string;
+            displayName?: string;
+            departmentCode?: string;
         };
         AuditEvent: {
             type?: string;
@@ -1600,7 +1673,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2024,7 +2097,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2093,7 +2166,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2322,7 +2395,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2391,7 +2464,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3028,7 +3101,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3097,7 +3170,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3146,6 +3219,148 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Password updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Invalid/expired token or weak password */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    forgotPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted — a reset email may have been queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */
@@ -3392,6 +3607,73 @@ export interface operations {
             };
         };
     };
+    eligibleDelegatees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eligible delegatees (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EligibleDelegateeResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Caller is not the current approver */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Request not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Request is not in review or has no active step */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     audit: {
         parameters: {
             query?: {
@@ -3586,7 +3868,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3723,7 +4005,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3864,7 +4146,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Missing permission */
             403: {
                 headers: {
                     [name: string]: unknown;

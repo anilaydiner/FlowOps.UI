@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -19,7 +19,12 @@ import {
   type RequestResponse,
   type StepDto,
 } from "@/api/endpoints"
-import { apiErrorText } from "@/api/error-text"
+import { apiErrorText, generalError, isClientError } from "@/api/error-text"
+import {
+  canAct,
+  extractAmount,
+  type DecisionTarget,
+} from "@/api/authorization"
 import { formatDate } from "@/lib/format"
 import { useAuth } from "@/auth/auth"
 import { PageHeader } from "@/components/page"
@@ -99,21 +104,24 @@ export function RequestDetailPage() {
     staleTime: 5 * 60_000,
   })
 
-  // Users for the DELEGATE target picker.
-  const { data: usersData } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => adminApi.users({ size: 100 }),
-    enabled: true,
-    staleTime: 5 * 60_000,
-  })
-  const users = (usersData?.content ?? []).filter((u) => u.active !== false)
-
   const [decideOpen, setDecideOpen] = useState(false)
   const [action, setAction] = useState<DecisionRequest["action"]>("APPROVE")
   const [justification, setJustification] = useState("")
   const [delegatedTo, setDelegatedTo] = useState<string>("")
   const [clarification, setClarification] = useState("")
   const [pendingAnswers, setPendingAnswers] = useState<Record<number, string>>({})
+  const [decideErr, setDecideErr] = useState<string | null>(null)
+
+  // Delegate candidates for the DELEGATE picker: only users who would pass
+  // the same approval gate for THIS request (server-enforced — the raw users
+  // endpoint is not used, so out-of-scope / junior / requester are excluded).
+  // Fetched lazily, only while the picker is relevant.
+  const delegatees = useQuery({
+    queryKey: ["eligible-delegatees", requestId],
+    queryFn: () => requestsApi.eligibleDelegatees(requestId),
+    enabled: decideOpen && action === "DELEGATE" && Number.isFinite(requestId),
+    staleTime: 30_000,
+  })
 
   const requestRef = req as RequestResponse | undefined
 
@@ -121,12 +129,70 @@ export function RequestDetailPage() {
     user?.id !== undefined &&
     requestRef?.requester?.id === user.id
   const currentStep = (requestRef?.steps ?? []).find((s) => s.state === "PENDING")
+
+  // ── Decision gate (permission-based, mirrors the server) ────────────────
+  // The backend authorizes actions through permission + scope + SoD — not
+  // through role codes. So we derive the user's effective permission set
+  // from their roles (catalogs below) and evaluate it against THIS request,
+  // instead of matching user.roles against the step's requiredRole. That
+  // automatically covers delegatees too: the delegation gate requires the
+  // delegatee to hold the same approval permission, so they pass here as
+  // well. Catalogs are cached under the shared ["roles"] / ["permissions"]
+  // keys used by the admin pages.
+  const { data: rolesData } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => adminApi.roles({ size: 100 }),
+    staleTime: 5 * 60_000,
+  })
+  const { data: permsData } = useQuery({
+    queryKey: ["permissions"],
+    queryFn: () => adminApi.permissions({ size: 200 }),
+    staleTime: 5 * 60_000,
+  })
+
+  const decisionTarget = useMemo<DecisionTarget | null>(() => {
+    if (!requestRef) return null
+    return {
+      requesterId: requestRef.requester?.id ?? null,
+      typeCode: requestRef.typeCode ?? null,
+      departmentCode: requestRef.departmentCode ?? null,
+      stepCode: currentStep?.code ?? null,
+      amount: extractAmount(requestRef.payload ?? null),
+    }
+  }, [requestRef, currentStep])
+
+  const canApprove = useMemo(
+    () =>
+      user !== undefined &&
+      decisionTarget !== null &&
+      canAct(
+        user,
+        rolesData?.content ?? [],
+        permsData?.content ?? [],
+        "request:approve",
+        decisionTarget,
+      ),
+    [user, decisionTarget, rolesData, permsData],
+  )
+  const canReject = useMemo(
+    () =>
+      user !== undefined &&
+      decisionTarget !== null &&
+      canAct(
+        user,
+        rolesData?.content ?? [],
+        permsData?.content ?? [],
+        "request:reject",
+        decisionTarget,
+      ),
+    [user, decisionTarget, rolesData, permsData],
+  )
+
   const canDecide =
     requestRef !== undefined &&
     requestRef.status === "IN_REVIEW" &&
-    !isRequester &&
     currentStep !== undefined &&
-    (isAdmin || (user?.roles ?? []).includes(currentStep.requiredRole ?? ""))
+    (canApprove || canReject)
 
   const submitMutation = useMutation({
     mutationFn: () => requestsApi.submit(requestId),
@@ -176,11 +242,18 @@ export function RequestDetailPage() {
       setJustification("")
       setDelegatedTo("")
       setAction("APPROVE")
+      setDecideErr(null)
       invalidate()
     },
     onError: (err) => {
-      toast.error(apiErrorText(err))
-      setDecideOpen(false)
+      // 4xx (self-delegation, inactive, no permission, unknown user) → keep
+      // the dialog open and show the reason inline; 5xx → toast and close.
+      if (isClientError(err)) {
+        setDecideErr(generalError(err) ?? apiErrorText(err))
+      } else {
+        toast.error(apiErrorText(err))
+        setDecideOpen(false)
+      }
     },
   })
   const clarificationMutation = useMutation({
@@ -282,7 +355,13 @@ export function RequestDetailPage() {
               </>
             )}
             {canDecide && (
-              <Button onClick={() => setDecideOpen(true)}>
+              <Button
+                onClick={() => {
+                  setDecideErr(null)
+                  setAction(canApprove ? "APPROVE" : "REJECT")
+                  setDecideOpen(true)
+                }}
+              >
                 <CheckCircle2 />
                 Make decision
               </Button>
@@ -596,33 +675,79 @@ export function RequestDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
+            {decideErr && (
+              <div
+                role="alert"
+                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {decideErr}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
-              {(["APPROVE", "REJECT", "DELEGATE", "OVERRIDE"] as const).map((a) => (
-                <Button
-                  key={a}
-                  size="sm"
-                  variant={action === a ? "default" : "outline"}
-                  onClick={() => setAction(a)}
-                >
-                  {a}
-                </Button>
-              ))}
+              {(["APPROVE", "REJECT", "DELEGATE", "OVERRIDE"] as const).map((a) => {
+                // Same gate the server applies: APPROVE/DELEGATE need
+                // request:approve (scope-matched), REJECT needs
+                // request:reject. OVERRIDE is not implemented yet (409).
+                const allowed =
+                  a === "APPROVE" || a === "DELEGATE"
+                    ? canApprove
+                    : a === "REJECT"
+                      ? canReject
+                      : false
+                return (
+                  <Button
+                    key={a}
+                    size="sm"
+                    variant={action === a ? "default" : "outline"}
+                    disabled={!allowed}
+                    title={
+                      allowed
+                        ? undefined
+                        : "You don't have permission for this action on this request"
+                    }
+                    onClick={() => setAction(a)}
+                  >
+                    {a}
+                  </Button>
+                )
+              })}
             </div>
             {action === "DELEGATE" && (
               <div className="flex flex-col gap-2">
                 <Label>Delegate to</Label>
-                <Select value={delegatedTo} onValueChange={setDelegatedTo}>
+                <Select
+                  value={delegatedTo}
+                  onValueChange={setDelegatedTo}
+                  disabled={delegatees.isPending}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a user" />
+                    <SelectValue
+                      placeholder={
+                        delegatees.isPending ? "Loading eligible users…" : "Choose a user"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.map((u) => (
+                    {(delegatees.data ?? []).map((u) => (
                       <SelectItem key={u.id} value={String(u.id)}>
-                        {u.displayName ?? u.username} ({(u.roles ?? []).join(", ")})
+                        {u.displayName ?? u.username}
+                        {u.departmentCode ? ` (${u.departmentCode})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {delegatees.isError && (
+                  <p role="alert" className="text-xs font-medium text-destructive">
+                    {apiErrorText(delegatees.error)}
+                  </p>
+                )}
+                {!delegatees.isPending &&
+                  !delegatees.isError &&
+                  (delegatees.data ?? []).length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No other user is eligible to take this decision.
+                    </p>
+                  )}
               </div>
             )}
             <div className="flex flex-col gap-2">

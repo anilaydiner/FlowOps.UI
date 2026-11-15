@@ -12,6 +12,7 @@ export type WorkflowResponse = S["WorkflowResponse"]
 export type RequestResponse = S["RequestResponse"]
 export type StepDto = S["StepDto"]
 export type DecisionRequest = S["DecisionRequest"]
+export type EligibleDelegateeResponse = S["EligibleDelegateeResponse"]
 export type NotificationResponse = S["NotificationResponse"]
 export type AuditEvent = S["AuditEvent"]
 export type Page<T> = {
@@ -50,6 +51,20 @@ export const authApi = {
       body: { username, password },
       noRedirectOn401: true,
     }),
+  /** Always 202 (uniform body) — no user enumeration. */
+  forgotPassword: (email: string) =>
+    api<{ message?: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: { email },
+      noRedirectOn401: true,
+    }),
+  /** 200 on success; uniform 400 for bad/expired/used token or weak password. */
+  resetPassword: (token: string, newPassword: string) =>
+    api<null>("/auth/reset-password", {
+      method: "POST",
+      body: { token, newPassword },
+      noRedirectOn401: true,
+    }),
 }
 
 export const meApi = {
@@ -74,6 +89,8 @@ export const requestsApi = {
   close: (id: number) => api<RequestResponse>(`/requests/${id}/close`, { method: "POST" }),
   decide: (id: number, body: DecisionRequest) =>
     api<RequestResponse>(`/requests/${id}/decisions`, { method: "POST", body }),
+  eligibleDelegatees: (id: number) =>
+    api<EligibleDelegateeResponse[]>(`/requests/${id}/eligible-delegatees`),
   askClarification: (id: number, question: string) =>
     api<S["ClarificationResponse"]>(`/requests/${id}/clarifications`, {
       method: "POST",

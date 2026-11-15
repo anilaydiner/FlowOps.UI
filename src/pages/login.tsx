@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { apiErrorText } from "@/api/error-text"
 import { ApiError } from "@/api/client"
@@ -99,6 +99,14 @@ export function LoginPage() {
               <Button type="submit" disabled={busy}>
                 {busy ? "Signing in…" : "Sign in"}
               </Button>
+              <div className="text-center">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
             </form>
           </CardContent>
         </Card>

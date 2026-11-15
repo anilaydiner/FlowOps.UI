@@ -27,6 +27,12 @@ const QueuePage = lazy(() =>
 const NotificationsPage = lazy(() =>
   import("@/pages/notifications").then((m) => ({ default: m.NotificationsPage })),
 )
+const ForgotPasswordPage = lazy(() =>
+  import("@/pages/forgot-password").then((m) => ({ default: m.ForgotPasswordPage })),
+)
+const ResetPasswordPage = lazy(() =>
+  import("@/pages/reset-password").then((m) => ({ default: m.ResetPasswordPage })),
+)
 const AdminUsersPage = lazy(() =>
   import("@/pages/admin-users").then((m) => ({ default: m.AdminUsersPage })),
 )
@@ -97,6 +103,22 @@ export default function App() {
                 element={
                   <PublicOnly>
                     <LoginPage />
+                  </PublicOnly>
+                }
+              />
+              <Route
+                path="/forgot-password"
+                element={
+                  <PublicOnly>
+                    <ForgotPasswordPage />
+                  </PublicOnly>
+                }
+              />
+              <Route
+                path="/reset-password"
+                element={
+                  <PublicOnly>
+                    <ResetPasswordPage />
                   </PublicOnly>
                 }
               />
