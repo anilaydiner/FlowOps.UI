@@ -107,8 +107,8 @@ export function AppShell() {
     staleTime: 5_000,
   })
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     queryClient.clear()
     navigate("/login")
   }

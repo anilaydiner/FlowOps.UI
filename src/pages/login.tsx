@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { apiErrorText } from "@/api/error-text"
 import { ApiError } from "@/api/client"
@@ -23,6 +23,8 @@ export function LoginPage() {
   const [password, setPassword] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [searchParams] = useSearchParams()
+  const sessionExpired = searchParams.get("reason") === "expired"
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -56,6 +58,15 @@ export function LoginPage() {
             </div>
           </div>
         </div>
+
+        {sessionExpired && (
+          <div
+            role="status"
+            className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+          >
+            Your session has expired or was signed out. Please sign in again.
+          </div>
+        )}
 
         <Card>
           <CardHeader>

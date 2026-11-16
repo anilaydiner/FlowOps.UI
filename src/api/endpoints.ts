@@ -1,4 +1,4 @@
-import { api, type QueryParams } from "./client"
+import { api, tokenStore, type QueryParams } from "./client"
 import type { components } from "./schema"
 
 type S = components["schemas"]
@@ -65,6 +65,24 @@ export const authApi = {
       body: { token, newPassword },
       noRedirectOn401: true,
     }),
+  /**
+   * Revoke the current session server-side. 204 on success.
+   * Sends the stored refresh token in the body (permitAll endpoint) so this
+   * still revokes the session even when the access token is already expired.
+   * Note: only include the body when a refresh token exists — the backend
+   * body DTO is validated (@NotBlank) and an empty string would 400.
+   */
+  logout: () => {
+    const refreshToken = tokenStore.getRefresh()
+    return api<null>("/auth/logout", {
+      method: "POST",
+      ...(refreshToken ? { body: { refreshToken } } : {}),
+      noRedirectOn401: true,
+    })
+  },
+  /** Revoke EVERY session for the current user (requires a live access token). */
+  logoutAll: () =>
+    api<null>("/auth/logout-all", { method: "POST", noRedirectOn401: true }),
 }
 
 export const meApi = {

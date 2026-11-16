@@ -16,7 +16,8 @@ interface AuthContextValue {
   ready: boolean
   isAdmin: boolean
   login: (username: string, password: string) => Promise<void>
-  logout: () => void
+  /** Revokes the session server-side, then clears local state. Always resolves. */
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -33,13 +34,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true)
       return
     }
+    // Absolute session deadline passed (30d max) → nothing to restore.
+    // (The api() interceptor would also discover this via a failed refresh,
+    // but checking locally avoids the round-trip.)
+    const sessionExpiresAt = tokenStore.getSessionExpiresAt()
+    if (sessionExpiresAt && Date.parse(sessionExpiresAt) <= Date.now()) {
+      tokenStore.clear()
+      setReady(true)
+      return
+    }
+    // An expired ACCESS token is fine: meApi.get() goes through the
+    // interceptor, which rotates the refresh token on 401 before retrying.
     meApi
       .get()
       .then((me) => {
         if (!cancelled) setUser(me)
       })
       .catch(() => {
-        tokenStore.clear()
+        // Only clear if the interceptor didn't already sign the user out.
+        if (!tokenStore.get()) tokenStore.clear()
         if (!cancelled) setUser(null)
       })
       .finally(() => {
@@ -53,12 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const res = await authApi.login(username, password)
     if (!res.token) throw new ApiError({ title: "Login failed" }, 500)
-    tokenStore.set(res.token)
+    // Persist the full pair: access token + refresh token + deadlines.
+    tokenStore.storeAuthResponse(res)
     const me = await meApi.get()
     setUser(me)
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Revoke server-side first (best effort — the session may already be dead,
+    // and local sign-out must always succeed regardless).
+    try {
+      await authApi.logout()
+    } catch {
+      // ignore
+    }
     tokenStore.clear()
     setUser(null)
   }, [])
