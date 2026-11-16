@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 export function NotificationsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [page, setPage] = useState(0)
+  const [page, setPage] = useState(1)
 
   const { data, isPending } = useQuery({
     queryKey: ["notifications", page],
@@ -131,18 +131,18 @@ export function NotificationsPage() {
           <Button
             variant="outline"
             size="sm"
-            disabled={page <= 0}
+            disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
           >
             Previous
           </Button>
           <span className="text-muted-foreground">
-            Page {page + 1} / {data?.totalPages}
+            Page {page} / {data?.totalPages}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={page >= (data?.totalPages ?? 1) - 1}
+            disabled={page >= (data?.totalPages ?? 1)}
             onClick={() => setPage((p) => p + 1)}
           >
             Next

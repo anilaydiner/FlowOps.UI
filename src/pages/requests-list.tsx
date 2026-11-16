@@ -59,12 +59,12 @@ export function RequestsListPage() {
     status: undefined,
     typeCode: undefined,
     mine: false,
-    page: 0,
+    page: 1,
     size: PAGE_SIZE,
   })
 
   const setFilter = (patch: Partial<RequestListQuery>) =>
-    setQuery((q) => ({ ...q, ...patch, page: 0 }))
+    setQuery((q) => ({ ...q, ...patch, page: 1 }))
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["requests", query],
@@ -81,7 +81,7 @@ export function RequestsListPage() {
 
   const rows = data?.content ?? []
   const total = data?.totalElements ?? 0
-  const page = data?.page ?? 0
+  const page = data?.page ?? 1
   const pages = data?.totalPages ?? 0
 
   const columns: ColumnDef<RequestResponse>[] = [
@@ -272,19 +272,19 @@ export function RequestsListPage() {
           <Button
             variant="outline"
             size="icon"
-            disabled={page <= 0}
-            onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 0) - 1 }))}
+            disabled={page <= 1}
+            onClick={() => setQuery((q) => ({ ...q, page: Math.max(1, (q.page ?? 1) - 1) }))}
           >
             <ArrowLeft />
           </Button>
           <span className="text-sm">
-            Page {page + 1} / {Math.max(pages, 1)}
+            Page {page} / {Math.max(pages, 1)}
           </span>
           <Button
             variant="outline"
             size="icon"
-            disabled={page >= pages - 1}
-            onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 0) + 1 }))}
+            disabled={page >= pages}
+            onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) + 1 }))}
           >
             <ArrowRight />
           </Button>

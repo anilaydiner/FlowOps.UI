@@ -139,7 +139,7 @@ export interface paths {
          *     - `name` — partial match
          *
          *     **Sorting** — repeatable `sort` param, format `field,asc|desc`
-         *     **Pagination**: `page` (default 0), `size` (default 20, max 100)
+         *     **Pagination**: `page` (default 1), `size` (default 20, max 100)
          */
         get: operations["list"];
         put?: never;
@@ -175,7 +175,7 @@ export interface paths {
          *     - `sort=createdAt,desc&sort=username,asc`  (multi-sort)
          *
          *     **Pagination**:
-         *     - `page` — zero-based page number (default 0)
+         *     - `page` — one-based page number (default 1)
          *     - `size` — page size (default 20, max 100)
          */
         get: operations["list_1"];
@@ -203,7 +203,7 @@ export interface paths {
          *     - `name` — partial match
          *
          *     **Sorting** — repeatable `sort` param, format `field,asc|desc`
-         *     **Pagination**: `page` (default 0), `size` (default 20, max 100)
+         *     **Pagination**: `page` (default 1), `size` (default 20, max 100)
          */
         get: operations["list_2"];
         put?: never;
@@ -232,7 +232,7 @@ export interface paths {
          *     - `mine` — true to restrict to the caller's requests (admin only)
          *
          *     **Sorting** — repeatable `sort` param, format `field,asc|desc`
-         *     **Pagination**: `page` (default 0), `size` (default 20, max 100)
+         *     **Pagination**: `page` (default 1), `size` (default 20, max 100)
          */
         get: operations["list_3"];
         put?: never;
@@ -383,7 +383,7 @@ export interface paths {
          *     - `active` — true / false
          *
          *     **Sorting** — repeatable `sort` param, format `field,asc|desc`
-         *     **Pagination**: `page` (default 0), `size` (default 20, max 100)
+         *     **Pagination**: `page` (default 1), `size` (default 20, max 100)
          */
         get: operations["list_5"];
         put?: never;
@@ -562,7 +562,7 @@ export interface paths {
          *     caller's roles and the caller is not the requester (SoD).
          *
          *     **Sorting** — repeatable `sort` param, format `field,asc|desc`
-         *     **Pagination**: `page` (default 0), `size` (default 20, max 100)
+         *     **Pagination**: `page` (default 1), `size` (default 20, max 100)
          */
         get: operations["queue"];
         put?: never;
@@ -589,7 +589,7 @@ export interface paths {
          *     - `name` — partial match
          *
          *     **Sorting** — repeatable `sort` param, format `field,asc|desc`
-         *     **Pagination**: `page` (default 0), `size` (default 20, max 100)
+         *     **Pagination**: `page` (default 1), `size` (default 20, max 100)
          */
         get: operations["list_6"];
         put?: never;
@@ -674,7 +674,7 @@ export interface paths {
          *     - `sort=name,desc&sort=code,asc`  (multi-sort)
          *
          *     **Pagination**:
-         *     - `page` — zero-based page number (default 0)
+         *     - `page` — one-based page number (default 1)
          *     - `size` — page size (default 20, max 100)
          */
         get: operations["list_8"];
@@ -2059,7 +2059,7 @@ export interface operations {
                 name?: string;
                 /** @description Sort field + direction: field,asc|desc. Repeatable for multi-sort. */
                 sort?: string[];
-                /** @description Zero-based page number (default 0) */
+                /** @description One-based page number (default 1) */
                 page?: number;
                 /** @description Page size (default 20, max 100) */
                 size?: number;
@@ -2212,7 +2212,7 @@ export interface operations {
                 active?: boolean;
                 /** @description Sort field + direction: field,asc|desc. Repeatable for multi-sort. */
                 sort?: string[];
-                /** @description Zero-based page number (default 0) */
+                /** @description One-based page number (default 1) */
                 page?: number;
                 /** @description Page size (default 20, max 100) */
                 size?: number;
@@ -2357,7 +2357,7 @@ export interface operations {
                 name?: string;
                 /** @description Sort field + direction: field,asc|desc. Repeatable for multi-sort. */
                 sort?: string[];
-                /** @description Zero-based page number (default 0) */
+                /** @description One-based page number (default 1) */
                 page?: number;
                 /** @description Page size (default 20, max 100) */
                 size?: number;
@@ -2504,7 +2504,7 @@ export interface operations {
                 mine?: boolean;
                 /** @description Sort field + direction: field,asc|desc. Repeatable for multi-sort. */
                 sort?: string[];
-                /** @description Zero-based page number (default 0) */
+                /** @description One-based page number (default 1) */
                 page?: number;
                 /** @description Page size (default 20, max 100) */
                 size?: number;
@@ -3063,7 +3063,7 @@ export interface operations {
                 active?: boolean;
                 /** @description Sort field + direction: field,asc|desc. Repeatable for multi-sort. */
                 sort?: string[];
-                /** @description Zero-based page number (default 0) */
+                /** @description One-based page number (default 1) */
                 page?: number;
                 /** @description Page size (default 20, max 100) */
                 size?: number;
@@ -3754,7 +3754,7 @@ export interface operations {
             query?: {
                 /** @description Sort field + direction: field,asc|desc. Repeatable for multi-sort. */
                 sort?: string[];
-                /** @description Zero-based page number (default 0) */
+                /** @description One-based page number (default 1) */
                 page?: number;
                 /** @description Page size (default 20, max 100) */
                 size?: number;
@@ -3830,7 +3830,7 @@ export interface operations {
                 name?: string;
                 /** @description Sort field + direction: field,asc|desc. Repeatable for multi-sort. */
                 sort?: string[];
-                /** @description Zero-based page number (default 0) */
+                /** @description One-based page number (default 1) */
                 page?: number;
                 /** @description Page size (default 20, max 100) */
                 size?: number;
@@ -3969,6 +3969,7 @@ export interface operations {
             query?: {
                 /** @description When true, return only unread notifications */
                 unread?: boolean;
+                /** @description One-based page number (default 1) */
                 page?: number;
                 size?: number;
             };
@@ -4108,7 +4109,7 @@ export interface operations {
                 name?: string;
                 /** @description Sort field + direction: field,asc|desc. Repeatable for multi-sort. */
                 sort?: string[];
-                /** @description Zero-based page number (default 0) */
+                /** @description One-based page number (default 1) */
                 page?: number;
                 /** @description Page size (default 20, max 100) */
                 size?: number;

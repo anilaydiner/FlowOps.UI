@@ -28,7 +28,7 @@ const PAGE_SIZE = 20
 
 export function QueuePage() {
   const navigate = useNavigate()
-  const [page, setPage] = useState(0)
+  const [page, setPage] = useState(1)
 
   const { data, isPending } = useQuery({
     queryKey: ["queue", page],
@@ -173,18 +173,18 @@ export function QueuePage() {
           <Button
             variant="outline"
             size="icon"
-            disabled={page <= 0}
+            disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
           >
             <ArrowLeft />
           </Button>
           <span className="text-sm">
-            Page {page + 1} / {totalPages}
+            Page {page} / {totalPages}
           </span>
           <Button
             variant="outline"
             size="icon"
-            disabled={page >= totalPages - 1}
+            disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
             <ArrowRight />

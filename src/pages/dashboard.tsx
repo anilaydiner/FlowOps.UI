@@ -65,12 +65,12 @@ export function DashboardPage() {
   const myRequests = useQuery({
     queryKey: ["requests", "dashboard-mine"],
     queryFn: () =>
-      requestsApi.list({ page: 0, size: 5, mine: isAdmin ? true : undefined }),
+      requestsApi.list({ page: 1, size: 5, mine: isAdmin ? true : undefined }),
     staleTime: 15_000,
   })
   const queue = useQuery({
     queryKey: ["queue", "dashboard"],
-    queryFn: () => requestsApi.queue({ page: 0, size: 1 }),
+    queryFn: () => requestsApi.queue({ page: 1, size: 1 }),
     staleTime: 15_000,
   })
   const unread = useQuery({
