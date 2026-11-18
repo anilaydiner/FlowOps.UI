@@ -1,6 +1,8 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  AlertTriangle,
+  Activity,
   Bell,
   FileText,
   Inbox,
@@ -39,7 +41,9 @@ const MAIN_NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/requests", label: "Requests", icon: FileText },
   { to: "/queue", label: "My Approvals", icon: Inbox },
+  { to: "/blocked", label: "Blocked", icon: AlertTriangle },
   { to: "/notifications", label: "Notifications", icon: Bell },
+  { to: "/rollout", label: "Rollout", icon: Activity },
 ]
 
 const ADMIN_NAV: NavItem[] = [
@@ -133,6 +137,7 @@ export function AppShell() {
           <NavButton item={MAIN_NAV[1]} />
           <NavButton item={MAIN_NAV[2]} />
           <NavButton item={MAIN_NAV[3]} badge={unread?.count ?? 0} />
+          <NavButton item={MAIN_NAV[5]} />
 
           <div className="my-2 flex items-center gap-2 px-3">
             <Button

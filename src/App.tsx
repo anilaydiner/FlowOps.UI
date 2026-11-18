@@ -24,6 +24,16 @@ const RequestDetailPage = lazy(() =>
 const QueuePage = lazy(() =>
   import("@/pages/queue").then((m) => ({ default: m.QueuePage })),
 )
+const BlockedRequestsPage = lazy(() =>
+  import("@/pages/blocked-requests").then((m) => ({
+    default: m.BlockedRequestsPage,
+  })),
+)
+const ExecutionRolloutPage = lazy(() =>
+  import("@/pages/execution-rollout").then((m) => ({
+    default: m.ExecutionRolloutPage,
+  })),
+)
 const NotificationsPage = lazy(() =>
   import("@/pages/notifications").then((m) => ({ default: m.NotificationsPage })),
 )
@@ -138,6 +148,8 @@ export default function App() {
                   element={<RequestDetailPage />}
                 />
                 <Route path="/queue" element={<QueuePage />} />
+                <Route path="/blocked" element={<BlockedRequestsPage />} />
+                <Route path="/rollout" element={<ExecutionRolloutPage />} />
                 <Route
                   path="/notifications"
                   element={<NotificationsPage />}

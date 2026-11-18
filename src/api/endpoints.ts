@@ -15,6 +15,67 @@ export type DecisionRequest = S["DecisionRequest"]
 export type EligibleDelegateeResponse = S["EligibleDelegateeResponse"]
 export type NotificationResponse = S["NotificationResponse"]
 export type AuditEvent = S["AuditEvent"]
+export type BlockedResponse = S["BlockedResponse"]
+export type BlockedStep = S["BlockedStep"]
+export type StepRecovery = S["StepRecovery"]
+export type ParticipantResponse = S["ParticipantResponse"]
+export type ExecutionProgress = S["ExecutionProgress"]
+export type JobCounts = S["JobCounts"]
+export type ExecutionJobDto = S["ExecutionJobDto"]
+export type ExecutionRecoveryView = S["View"]
+export type RecoveryJob = S["Job"]
+export type Receipt = S["Receipt"]
+export type AttemptsView = S["Attempts"]
+export type AttemptEvent = S["Event"]
+export type RecoverRequest = S["RecoverRequest"]
+export type RolloutReport = S["Report"]
+export type RolloutCheck = S["Check"]
+
+/**
+ * GET /requests/{id}/execution-plan returns `GetExecutionPlan.View`
+ * ({known, plan}). The OpenAPI generator merges it with the unrelated
+ * execution-recovery `View` under the same schema name, so it is typed here.
+ */
+export interface ExecutionPlanAction {
+  position?: number
+  action?: string
+  idempotencyKey?: string
+  input?: Record<string, unknown>
+  correlationId?: string
+}
+
+export interface ExecutionPlanView {
+  known?: boolean
+  plan?: {
+    id?: string
+    requestId?: number
+    typeId?: number
+    typeCode?: string
+    plannedAt?: string
+    approval?: Record<string, unknown>
+    actions?: ExecutionPlanAction[]
+  }
+}
+
+export interface RecoveryCommand {
+  commandId: string
+  expectedVersion: number
+  reason: string
+}
+
+export interface RecoveryResponse {
+  requestVersion?: number
+  command?: Receipt
+}
+
+export interface BlockedListQuery extends QueryParams {
+  reason?: string
+  blockedBefore?: string
+  ownerId?: number
+  team?: string
+  page?: number
+  size?: number
+}
 export type Page<T> = {
   content?: T[]
   page?: number
@@ -121,6 +182,59 @@ export const requestsApi = {
     }),
   audit: (id: number, query?: QueryParams) =>
     api<AuditEvent[]>(`/requests/${id}/audit`, { query }),
+  /** Frozen approval-time action plan. known=false means legacy or not yet approved. */
+  executionPlan: (id: number) => api<ExecutionPlanView>(`/requests/${id}/execution-plan`),
+  /** Approval roster and delegation history (same access rules as request detail). */
+  participants: (id: number) => api<ParticipantResponse[]>(`/requests/${id}/participants`),
+  /** Operator recovery history (requires request:blocked:read). */
+  recoveries: (id: number) => api<StepRecovery[]>(`/requests/${id}/recoveries`),
+  /** Re-assign blocked participants and clear the block (requires request:recover). */
+  recover: (id: number, body: RecoverRequest) =>
+    api<RequestResponse>(`/requests/${id}/recover`, { method: "POST", body }),
+  /** Re-evaluate eligibility without reassigning (requires request:recover). */
+  recheck: (
+    id: number,
+    body: Pick<RecoverRequest, "stepInstanceId" | "expectedVersion" | "reason">,
+  ) => api<RequestResponse>(`/requests/${id}/recheck`, { method: "POST", body }),
+  /** Paged blocked-step operator view (requires request:blocked:read). */
+  blockedList: (query: BlockedListQuery) =>
+    api<Page<BlockedResponse>>("/requests/blocked", { query }),
+}
+
+/** Durable execution attention + immutable recovery history (execution:* permissions). */
+export const executionRecoveryApi = {
+  history: (requestId: number, limit?: number) =>
+    api<ExecutionRecoveryView>(`/requests/${requestId}/execution-recovery`, {
+      query: limit !== undefined ? { limit } : undefined,
+    }),
+  attempts: (requestId: number, jobId: number, query?: QueryParams) =>
+    api<AttemptsView>(
+      `/requests/${requestId}/execution-recovery/${jobId}/attempts`,
+      { query },
+    ),
+  events: (requestId: number, jobId: number, query?: QueryParams) =>
+    api<AttemptEvent[]>(
+      `/requests/${requestId}/execution-recovery/${jobId}/attempt-events`,
+      { query },
+    ),
+  reconcile: (requestId: number, jobId: number, body: RecoveryCommand) =>
+    api<RecoveryResponse>(
+      `/requests/${requestId}/execution-recovery/${jobId}/reconcile`,
+      { method: "POST", body },
+    ),
+  retry: (requestId: number, jobId: number, body: RecoveryCommand) =>
+    api<RecoveryResponse>(
+      `/requests/${requestId}/execution-recovery/${jobId}/retry`,
+      { method: "POST", body },
+    ),
+}
+
+/** Rollout certification report (requires global execution:rollout:read). */
+export const executionRolloutApi = {
+  check: (phase?: "PRE_ENABLE" | "POST_ENABLE") =>
+    api<RolloutReport>("/execution/rollout", {
+      query: phase !== undefined ? { phase } : undefined,
+    }),
 }
 
 export const notificationsApi = {

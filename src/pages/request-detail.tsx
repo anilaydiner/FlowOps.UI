@@ -26,10 +26,12 @@ import {
   type DecisionTarget,
 } from "@/api/authorization"
 import { formatDate } from "@/lib/format"
+import { hasExecution } from "@/lib/execution"
 import { useAuth } from "@/auth/auth"
 import { PageHeader } from "@/components/page"
+import { ExecutionCard } from "@/components/execution-card"
 import { DynamicPayloadForm } from "@/components/dynamic-payload-form"
-import { ActionBadge, JobBadge, StatusBadge, StepBadge } from "@/components/status-badge"
+import { ActionBadge, StatusBadge, StepBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -193,6 +195,62 @@ export function RequestDetailPage() {
     requestRef.status === "IN_REVIEW" &&
     currentStep !== undefined &&
     (canApprove || canReject)
+
+  // Operator recovery history is gated by request:blocked:read.
+  const canReadRecoveries = useMemo(
+    () =>
+      user !== undefined &&
+      decisionTarget !== null &&
+      canAct(
+        user,
+        rolesData?.content ?? [],
+        permsData?.content ?? [],
+        "request:blocked:read",
+        decisionTarget,
+      ),
+    [user, decisionTarget, rolesData, permsData],
+  )
+
+  // Recovery console is gated by execution:read / execution:reconcile / execution:retry.
+  const canReadRecovery = useMemo(
+    () =>
+      user !== undefined &&
+      decisionTarget !== null &&
+      canAct(
+        user,
+        rolesData?.content ?? [],
+        permsData?.content ?? [],
+        "execution:read",
+        decisionTarget,
+      ),
+    [user, decisionTarget, rolesData, permsData],
+  )
+  const canReconcile = useMemo(
+    () =>
+      user !== undefined &&
+      decisionTarget !== null &&
+      canAct(
+        user,
+        rolesData?.content ?? [],
+        permsData?.content ?? [],
+        "execution:reconcile",
+        decisionTarget,
+      ),
+    [user, decisionTarget, rolesData, permsData],
+  )
+  const canRetry = useMemo(
+    () =>
+      user !== undefined &&
+      decisionTarget !== null &&
+      canAct(
+        user,
+        rolesData?.content ?? [],
+        permsData?.content ?? [],
+        "execution:retry",
+        decisionTarget,
+      ),
+    [user, decisionTarget, rolesData, permsData],
+  )
 
   const submitMutation = useMutation({
     mutationFn: () => requestsApi.submit(requestId),
@@ -550,31 +608,15 @@ export function RequestDetailPage() {
             </CardContent>
           </Card>
 
-          {(requestRef.executionJobs?.length ?? 0) > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Execution</CardTitle>
-                <CardDescription>Jobs triggered by this request</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                {requestRef.executionJobs.map((job, i) => (
-                  <div key={job.id ?? i} className="flex items-center justify-between gap-3 text-sm">
-                    <div>
-                      <div className="font-medium">{job.action}</div>
-                      {job.lastError && (
-                        <div className="text-xs text-destructive">{job.lastError}</div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground">
-                        {job.retryCount ?? 0} retries
-                      </span>
-                      <JobBadge status={job.status} />
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+          {hasExecution(requestRef) && (
+            <ExecutionCard
+              requestId={requestId}
+              request={requestRef}
+              canReadRecoveries={canReadRecoveries}
+              canReadRecovery={canReadRecovery}
+              canReconcile={canReconcile}
+              canRetry={canRetry}
+            />
           )}
 
           <Card>

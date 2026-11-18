@@ -7,7 +7,7 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { AlertTriangle, ArrowLeft, ArrowRight } from "lucide-react"
 import {
   adminApi,
   REQUEST_STATUSES,
@@ -16,8 +16,9 @@ import {
   type RequestResponse,
 } from "@/api/endpoints"
 import { formatDate, formatRelative } from "@/lib/format"
+import { attentionText, hasExecution } from "@/lib/execution"
 import { PageHeader } from "@/components/page"
-import { StatusBadge } from "@/components/status-badge"
+import { ExecutionStateBadge, StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -39,6 +40,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useAuth } from "@/auth/auth"
 
 const PAGE_SIZE = 15
@@ -113,6 +119,38 @@ export function RequestsListPage() {
       id: "status",
       header: "Status",
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      id: "execution",
+      header: "Execution",
+      cell: ({ row }) => {
+        const req = row.original
+        if (!hasExecution(req)) {
+          return <span className="text-muted-foreground">—</span>
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <ExecutionStateBadge state={req.executionState} />
+            {req.requiresAttention && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-amber-500 hover:text-amber-600"
+                    aria-label="Execution needs attention"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <AlertTriangle className="size-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  {attentionText(req)}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        )
+      },
     },
     {
       id: "requester",

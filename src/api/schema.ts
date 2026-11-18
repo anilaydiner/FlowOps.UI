@@ -69,7 +69,7 @@ export interface paths {
         };
         /**
          * Get request detail
-         * @description Owner or admin only; 404 for other users (no existence leak).
+         * @description Uses normal persisted request read/ownership and current participant access rules. Includes retained outcome/milestones and live execution progress/attention without provider calls.
          */
         get: operations["get_3"];
         /**
@@ -231,6 +231,11 @@ export interface paths {
          *     - `typeCode` — exact type code (e.g. EXPENSE)
          *     - `mine` — true to restrict to the caller's requests (admin only)
          *
+         *     Responses retain business outcome and lifecycle milestone times after closure.
+         *     executionState, executionProgress and requiresAttention summarize current
+         *     frozen-plan/job evidence. Unknown expected work has expectedJobs=null;
+         *     only an explicitly empty plan has expectedJobs=0.
+         *
          *     **Sorting** — repeatable `sort` param, format `field,asc|desc`
          *     **Pagination**: `page` (default 1), `size` (default 20, max 100)
          */
@@ -245,6 +250,40 @@ export interface paths {
          *     Validation failures return 400 with per-field `violations`.
          */
         post: operations["createDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{requestId}/execution-recovery/{jobId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize one safe retry of held work with the original key/input; requires scoped execution:retry */
+        post: operations["retry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{requestId}/execution-recovery/{jobId}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Query provider outcome without executing; requires scoped execution:reconcile */
+        post: operations["reconcile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -276,6 +315,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/requests/{id}/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a blocked step without changing its approval threshold or counting a vote */
+        post: operations["recover"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{id}/recheck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recheck current eligibility; block unreachable work or resume a restored roster */
+        post: operations["recheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/requests/{id}/decisions": {
         parameters: {
             query?: never;
@@ -293,6 +366,9 @@ export interface paths {
          *     APPROVE satisfying the step's completion rule advances to the
          *     next applicable step, or APPROVED when none remain.
          *     Concurrent decisions serialize via optimistic locking (409).
+         *     A person may approve a step once. Delegation transfers responsibility.
+         *     Supply stepInstanceId and expectedVersion from the latest detail response
+         *     to reject stale submissions; both are optional for existing v1 clients.
          */
         post: operations["decide"];
         delete?: never;
@@ -312,7 +388,7 @@ export interface paths {
         put?: never;
         /**
          * Close an EXECUTED or REJECTED request (requester or admin)
-         * @description Transitions the request to the terminal CLOSED state. Other states return 409.
+         * @description Transitions to CLOSED while retaining the EXECUTED/REJECTED outcome and original milestones, and recording closedAt. Other states, including an already closed request, return 409.
          */
         post: operations["close"];
         delete?: never;
@@ -355,8 +431,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Cancel request (owner or admin)
-         * @description Any non-terminal state may be cancelled; terminal states return 409.
+         * Cancel request before durable execution start
+         * @description Owner/scoped cancellation permissions apply. Cancels active steps and unstarted jobs atomically; a durable execution start or unknown execution history returns 409. Authorized cancellation replay is idempotent.
          */
         post: operations["cancel"];
         delete?: never;
@@ -454,7 +530,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Revoke the current session using its access token or a refresh token */
+        /** Revoke the current refresh session; issued access tokens expire naturally */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -471,7 +547,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Revoke every session for the authenticated user */
+        /** Revoke every refresh session for the authenticated user */
         post: operations["logoutAll"];
         delete?: never;
         options?: never;
@@ -546,6 +622,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/requests/{requestId}/execution-recovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Execution attention and bounded immutable recovery history; requires scoped execution:read */
+        get: operations["history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{requestId}/execution-recovery/{jobId}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Immutable attempt starts and labeled legacy baseline; requires scoped execution:read */
+        get: operations["attempts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{requestId}/execution-recovery/{jobId}/attempt-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Immutable attempt outcomes, heartbeats and recovery facts; requires scoped execution:read */
+        get: operations["events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{id}/recoveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator recovery history; requires scoped blocked-request read access */
+        get: operations["history_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{id}/participants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Approval roster and delegation history
+         * @description Uses the same access rules as request detail. Legacy steps have no fabricated roster.
+         */
+        get: operations["participants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{id}/execution-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the frozen approval-time action plan using normal request read access; known=false means legacy or not yet approved */
+        get: operations["executionPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/requests/{id}/eligible-delegatees": {
         parameters: {
             query?: never;
@@ -581,14 +762,18 @@ export interface paths {
          * Audit timeline for a request
          * @description Chronological, append-only history: STATUS transitions,
          *     SUBMITTED, DECISION (with actor + evidence), JOB (created +
-         *     finished), and SLA breach events.
+         *     attempts), STEP, PARTICIPANT, CLARIFICATION, REQUEST edits, APPROVAL,
+         *     EXECUTION, EXECUTION_PLAN recovery/attention and SLA events.
+         *     Events include stable ids, sequence numbers and provenance. Recorded history
+         *     is read from immutable storage; legacy reconstructions/baselines are labeled.
          *
          *     **Filters** (all optional):
          *     - `from` — ISO-8601 instant, inclusive lower bound
          *     - `to`   — ISO-8601 instant, inclusive upper bound
-         *     - `type` — STATUS | SUBMITTED | DECISION | JOB | SLA
+         *     - `type` — STATUS | SUBMITTED | DECISION | JOB | SLA | STEP | PARTICIPANT | CLARIFICATION | REQUEST | APPROVAL | EXECUTION | EXECUTION_PLAN
          *
-         *     Owner or admin only; 404 for other users (no existence leak).
+         *     Request owners require audit:read; other callers require audit:read:any.
+         *     Approval participation alone does not grant audit access.
          */
         get: operations["audit"];
         put?: never;
@@ -609,13 +794,31 @@ export interface paths {
         /**
          * My pending approvals (approver inbox)
          * @description Returns IN_REVIEW requests where the caller is eligible for the
-         *     current (PENDING) step — i.e. the step's required role is in the
-         *     caller's roles and the caller is not the requester (SoD).
+         *     current PENDING step using current account state, workflow participation,
+         *     permission, scope and separation of duties. Prior voters and users who
+         *     transferred responsibility are excluded; access-token role claims are not authoritative.
          *
          *     **Sorting** — repeatable `sort` param, format `field,asc|desc`
          *     **Pagination**: `page` (default 1), `size` (default 20, max 100)
          */
         get: operations["queue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/blocked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Blocked requests visible to the current workflow operator */
+        get: operations["list_6"];
         put?: never;
         post?: never;
         delete?: never;
@@ -642,7 +845,7 @@ export interface paths {
          *     **Sorting** — repeatable `sort` param, format `field,asc|desc`
          *     **Pagination**: `page` (default 1), `size` (default 20, max 100)
          */
-        get: operations["list_6"];
+        get: operations["list_7"];
         put?: never;
         post?: never;
         delete?: never;
@@ -679,7 +882,7 @@ export interface paths {
          * List my notifications
          * @description Returns the authenticated user's notification feed, newest first. Supports filtering by read status and pagination.
          */
-        get: operations["list_7"];
+        get: operations["list_8"];
         put?: never;
         post?: never;
         delete?: never;
@@ -697,6 +900,23 @@ export interface paths {
         };
         /** Get unread notification count */
         get: operations["unreadCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/rollout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read-only execution rollout checks; requires active global execution:rollout:read. Does not certify manual acceptance. */
+        get: operations["check"];
         put?: never;
         post?: never;
         delete?: never;
@@ -728,7 +948,7 @@ export interface paths {
          *     - `page` — one-based page number (default 1)
          *     - `size` — page size (default 20, max 100)
          */
-        get: operations["list_8"];
+        get: operations["list_9"];
         put?: never;
         post?: never;
         delete?: never;
@@ -771,6 +991,12 @@ export interface components {
             slaMinutes?: number;
             escalationRole?: string;
             terminal?: boolean;
+            /** Format: int32 */
+            expiryMinutes?: number;
+            /** Format: int32 */
+            escalationIntervalMinutes?: number;
+            /** Format: int32 */
+            maxEscalationLevels?: number;
         };
         WorkflowRequest: {
             code: string;
@@ -797,6 +1023,12 @@ export interface components {
             slaMinutes?: number;
             escalationRole?: string;
             terminal?: boolean;
+            /** Format: int32 */
+            expiryMinutes?: number;
+            /** Format: int32 */
+            escalationIntervalMinutes?: number;
+            /** Format: int32 */
+            maxEscalationLevels?: number;
         };
         WorkflowResponse: {
             /** Format: int64 */
@@ -819,6 +1051,7 @@ export interface components {
             departmentCode?: string;
             roles?: string[];
             password?: string;
+            active?: boolean;
         };
         UserResponse: {
             /** Format: int64 */
@@ -901,6 +1134,53 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             completedAt?: string;
+            /** Format: date-time */
+            startedAt?: string;
+            /** Format: date-time */
+            cancelledAt?: string;
+            /** Format: int64 */
+            cancelledBy?: number;
+            /** Format: int32 */
+            attemptCount?: number;
+            /** Format: date-time */
+            leaseExpiresAt?: string;
+            startInferred?: boolean;
+        };
+        ExecutionProgress: {
+            /** @enum {string} */
+            state?: "NOT_PLANNED" | "UNKNOWN" | "QUEUED" | "RUNNING" | "RETRYING" | "COMPLETION_PENDING" | "COMPLETED" | "STOPPED" | "RECONCILIATION_REQUIRED";
+            /** Format: int32 */
+            expectedJobs?: number;
+            jobs?: components["schemas"]["JobCounts"];
+            attentionReasons?: ("REVIEW_BLOCKED" | "OUTCOME_UNKNOWN" | "EXECUTION_HISTORY_UNKNOWN" | "MISSING_FROZEN_PLAN" | "PLAN_INCONSISTENT" | "MISSING_JOBS" | "MISSING_JOB_BINDINGS" | "JOB_IDENTITY_MISMATCH" | "MATERIALIZATION_UNVERIFIABLE" | "UNEXPECTED_JOBS" | "UNCERTAIN_EXECUTION" | "RETRIES_EXHAUSTED" | "EXECUTION_LEASE_EXPIRED" | "EXPECTED_JOB_CANCELLED" | "STOPPED_REQUEST_HAS_RUNNABLE_JOBS")[];
+        };
+        JobCounts: {
+            /** Format: int32 */
+            total?: number;
+            /** Format: int32 */
+            planned?: number;
+            /** Format: int32 */
+            running?: number;
+            /** Format: int32 */
+            retrying?: number;
+            /** Format: int32 */
+            completed?: number;
+            /** Format: int32 */
+            uncertain?: number;
+            /** Format: int32 */
+            deadLetter?: number;
+            /** Format: int32 */
+            cancelled?: number;
+            /** Format: int32 */
+            missing?: number;
+            /** Format: int32 */
+            missingBindings?: number;
+            /** Format: int32 */
+            invalidBindings?: number;
+            /** Format: int32 */
+            unexpected?: number;
+            /** Format: int32 */
+            expiredLeases?: number;
         };
         RequestResponse: {
             /** Format: int64 */
@@ -925,6 +1205,32 @@ export interface components {
             updatedAt?: string;
             /** Format: date-time */
             submittedAt?: string;
+            /** Format: date-time */
+            executionPlannedAt?: string;
+            /** Format: date-time */
+            executionStartedAt?: string;
+            executionStartUnknown?: boolean;
+            executionStartInferred?: boolean;
+            /** Format: uuid */
+            executionPlanId?: string;
+            /** @enum {string} */
+            outcome?: "EXECUTED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+            /** Format: date-time */
+            approvedAt?: string;
+            /** Format: date-time */
+            rejectedAt?: string;
+            /** Format: date-time */
+            executedAt?: string;
+            /** Format: date-time */
+            cancelledAt?: string;
+            /** Format: date-time */
+            expiredAt?: string;
+            /** Format: date-time */
+            closedAt?: string;
+            /** @enum {string} */
+            executionState?: "NOT_PLANNED" | "UNKNOWN" | "QUEUED" | "RUNNING" | "RETRYING" | "COMPLETION_PENDING" | "COMPLETED" | "STOPPED" | "RECONCILIATION_REQUIRED";
+            executionProgress?: components["schemas"]["ExecutionProgress"];
+            requiresAttention?: boolean;
         };
         RequesterDto: {
             /** Format: int64 */
@@ -951,6 +1257,37 @@ export interface components {
             /** Format: date-time */
             satisfiedAt?: string;
             decisions?: components["schemas"]["DecisionDto"][];
+            rosterSnapshotted?: boolean;
+            /** Format: int32 */
+            rosterSize?: number;
+            /** @enum {string} */
+            blockReasonCode?: "NO_ELIGIBLE_APPROVER" | "INSUFFICIENT_QUORUM" | "PARTICIPANT_UNAVAILABLE" | "LEGACY_UNCLASSIFIED";
+            /** Format: date-time */
+            blockedAt?: string;
+            /** Format: int32 */
+            blockEpisode?: number;
+            /** Format: int64 */
+            recoveryOwnerId?: number;
+            recoveryTeam?: string;
+            /** Format: date-time */
+            recoveredAt?: string;
+            /** Format: date-time */
+            activatedAt?: string;
+            /** Format: date-time */
+            reviewDueAt?: string;
+            /** Format: date-time */
+            nextEscalationAt?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: int32 */
+            escalationLevel?: number;
+            /** Format: int32 */
+            recoveryOwnerRevision?: number;
+            recoveryOwnerUnavailable?: boolean;
+            /** Format: int32 */
+            escalationIntervalMinutes?: number;
+            /** Format: int32 */
+            maxEscalationLevels?: number;
         };
         ClarificationAnswerRequest: {
             answer: string;
@@ -1012,12 +1349,76 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        Command: {
+            /** Format: uuid */
+            commandId: string;
+            /** Format: int64 */
+            expectedVersion: number;
+            reason: string;
+        };
+        ProviderObservation: {
+            /** @enum {string} */
+            outcome?: "SUCCEEDED" | "SAFE_TO_RETRY" | "IN_PROGRESS" | "UNKNOWN";
+            evidenceReference?: string;
+            result?: {
+                [key: string]: unknown;
+            };
+        };
+        Receipt: {
+            /** Format: uuid */
+            commandId?: string;
+            /** Format: int64 */
+            jobId?: number;
+            /** @enum {string} */
+            kind?: "RECONCILE" | "RETRY";
+            /** Format: int64 */
+            actorId?: number;
+            actorName?: string;
+            reason?: string;
+            /** Format: int64 */
+            expectedVersion?: number;
+            /** Format: int32 */
+            attemptCount?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            disposition?: string;
+            provider?: components["schemas"]["ProviderObservation"];
+            /** Format: date-time */
+            recordedAt?: string;
+            failureType?: string;
+        };
+        Response: {
+            /** Format: int64 */
+            requestVersion?: number;
+            command?: components["schemas"]["Receipt"];
+        };
+        Assignment: {
+            /** Format: uuid */
+            predecessorId?: string;
+            /** Format: int64 */
+            userId: number;
+        };
+        RecoverRequest: {
+            /** Format: int64 */
+            stepInstanceId: number;
+            /** Format: int64 */
+            expectedVersion: number;
+            reason: string;
+            refreshPool?: boolean;
+            assignments?: components["schemas"]["Assignment"][];
+        };
         DecisionRequest: {
             /** @enum {string} */
             action: "APPROVE" | "REJECT" | "DELEGATE" | "OVERRIDE";
             justification?: string;
             /** Format: int64 */
             delegatedTo?: number;
+            /** Format: int64 */
+            stepInstanceId?: number;
+            /** Format: int64 */
+            expectedVersion?: number;
         };
         ClarificationRequest: {
             question: string;
@@ -1120,6 +1521,115 @@ export interface components {
             first?: boolean;
             last?: boolean;
         };
+        Job: {
+            /** Format: int64 */
+            id?: number;
+            action?: string;
+            idempotencyKey?: string;
+            /** @enum {string} */
+            status?: "PLANNED" | "STARTED" | "COMPLETED" | "FAILED" | "CANCELLED" | "RECONCILIATION_REQUIRED" | "DEAD_LETTER";
+            /** Format: int32 */
+            attemptCount?: number;
+            /** Format: int32 */
+            retryCount?: number;
+            /** Format: int32 */
+            maxRetries?: number;
+            /** Format: date-time */
+            startedAt?: string;
+            startInferred?: boolean;
+            /** Format: date-time */
+            leaseExpiresAt?: string;
+            lastError?: string;
+        };
+        View: {
+            /** Format: int64 */
+            requestId?: number;
+            /** Format: int64 */
+            requestVersion?: number;
+            jobs?: components["schemas"]["Job"][];
+            commands?: components["schemas"]["Receipt"][];
+        };
+        Attempt: {
+            /** Format: int32 */
+            number?: number;
+            action?: string;
+            /** Format: date-time */
+            authorizedAt?: string;
+            /** Format: date-time */
+            initialLeaseExpiresAt?: string;
+            /** Format: date-time */
+            deadline?: string;
+            correlationId?: string;
+        };
+        Attempts: {
+            /** Format: int64 */
+            jobId?: number;
+            baseline?: components["schemas"]["Baseline"];
+            attempts?: components["schemas"]["Attempt"][];
+        };
+        Baseline: {
+            /** Format: date-time */
+            observedAt?: string;
+            status?: string;
+            /** Format: int32 */
+            observedAttemptCount?: number;
+            /** Format: date-time */
+            firstStartedAt?: string;
+            startInferred?: boolean;
+            /** Format: date-time */
+            observedLeaseExpiresAt?: string;
+        };
+        Event: {
+            /** Format: int64 */
+            sequence?: number;
+            /** Format: int32 */
+            attemptNumber?: number;
+            baseline?: boolean;
+            /** @enum {string} */
+            kind?: "HEARTBEAT" | "OUTCOME" | "HOLD" | "PROVIDER_OBSERVATION" | "RETRY_AUTHORIZED";
+            /** Format: date-time */
+            at?: string;
+            /** Format: date-time */
+            leaseExpiresAt?: string;
+            outcome?: string;
+            details?: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            recoveryCommandId?: string;
+        };
+        StepRecovery: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int64 */
+            stepInstanceId?: number;
+            /** Format: int32 */
+            blockEpisode?: number;
+            /** Format: int64 */
+            actorId?: number;
+            reason?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ParticipantResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            slotId?: string;
+            /** Format: int64 */
+            stepInstanceId?: number;
+            /** Format: int64 */
+            userId?: number;
+            /** Format: uuid */
+            predecessorId?: string;
+            /** Format: int64 */
+            decisionId?: number;
+            /** Format: date-time */
+            assignedAt?: string;
+            currentAssignment?: boolean;
+            /** Format: uuid */
+            recoveryId?: string;
+        };
         EligibleDelegateeResponse: {
             /** Format: int64 */
             id?: number;
@@ -1136,6 +1646,48 @@ export interface components {
             details?: {
                 [key: string]: unknown;
             };
+            /** Format: uuid */
+            eventId?: string;
+            /** Format: int64 */
+            sequence?: number;
+            provenance?: string;
+        };
+        BlockedResponse: {
+            request?: components["schemas"]["RequestResponse"];
+            block?: components["schemas"]["BlockedStep"];
+        };
+        BlockedStep: {
+            /** Format: int64 */
+            requestId?: number;
+            /** Format: int64 */
+            stepInstanceId?: number;
+            stepCode?: string;
+            /** @enum {string} */
+            reason?: "NO_ELIGIBLE_APPROVER" | "INSUFFICIENT_QUORUM" | "PARTICIPANT_UNAVAILABLE" | "LEGACY_UNCLASSIFIED";
+            detail?: string;
+            /** Format: date-time */
+            blockedAt?: string;
+            /** Format: int32 */
+            episode?: number;
+            /** Format: int64 */
+            ownerId?: number;
+            team?: string;
+            /** Format: int32 */
+            ownerRevision?: number;
+            ownerUnavailable?: boolean;
+        };
+        PageResponseBlockedResponse: {
+            content?: components["schemas"]["BlockedResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            first?: boolean;
+            last?: boolean;
         };
         PageResponseRequestTypeResponse: {
             content?: components["schemas"]["RequestTypeResponse"][];
@@ -1186,6 +1738,30 @@ export interface components {
             totalPages?: number;
             first?: boolean;
             last?: boolean;
+        };
+        Check: {
+            code?: string;
+            /** @enum {string} */
+            status?: "PASS" | "BLOCKER" | "ATTENTION";
+            /** Format: int64 */
+            count?: number;
+            summary?: string;
+        };
+        Contract: {
+            action?: string;
+            contract?: {
+                [key: string]: unknown;
+            };
+        };
+        Report: {
+            /** Format: date-time */
+            checkedAt?: string;
+            /** @enum {string} */
+            phase?: "PRE_ENABLE" | "POST_ENABLE";
+            machineChecksPassed?: boolean;
+            checks?: components["schemas"]["Check"][];
+            contracts?: components["schemas"]["Contract"][];
+            manualAcceptanceRequired?: string[];
         };
         Department: {
             /** Format: int64 */
@@ -2699,6 +3275,150 @@ export interface operations {
             };
         };
     };
+    retry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+                jobId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Command"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Response"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    reconcile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+                jobId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Command"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Response"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     submit: {
         parameters: {
             query?: never;
@@ -2756,6 +3476,148 @@ export interface operations {
                 };
             };
             /** @description Not in DRAFT, no workflow configured, or workflow inactive */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    recover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoverRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    recheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoverRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3098,7 +3960,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Request is in a terminal state */
+            /** @description Execution started, history/plan is unknown, or request cannot be cancelled */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3865,6 +4727,418 @@ export interface operations {
             };
         };
     };
+    history: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["View"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    attempts: {
+        parameters: {
+            query?: {
+                beforeAttempt?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                requestId: number;
+                jobId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Attempts"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    events: {
+        parameters: {
+            query?: {
+                beforeSequence?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                requestId: number;
+                jobId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Event"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    history_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["StepRecovery"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    participants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ParticipantResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    executionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["View"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     eligibleDelegatees: {
         parameters: {
             query?: never;
@@ -3978,7 +5252,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Forbidden */
+            /** @description Audit permission not granted */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3987,7 +5261,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Request not found (or not the owner) */
+            /** @description Request not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4080,6 +5354,79 @@ export interface operations {
         };
     };
     list_6: {
+        parameters: {
+            query?: {
+                reason?: "NO_ELIGIBLE_APPROVER" | "INSUFFICIENT_QUORUM" | "PARTICIPANT_UNAVAILABLE" | "LEGACY_UNCLASSIFIED";
+                blockedBefore?: string;
+                ownerId?: number;
+                team?: string;
+                sort?: string[];
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseBlockedResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    list_7: {
         parameters: {
             query?: {
                 /** @description Partial permission code match (case-insensitive) */
@@ -4222,7 +5569,7 @@ export interface operations {
             };
         };
     };
-    list_7: {
+    list_8: {
         parameters: {
             query?: {
                 /** @description When true, return only unread notifications */
@@ -4358,7 +5705,74 @@ export interface operations {
             };
         };
     };
-    list_8: {
+    check: {
+        parameters: {
+            query?: {
+                phase?: "PRE_ENABLE" | "POST_ENABLE";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Report"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    list_9: {
         parameters: {
             query?: {
                 /** @description Partial department code match (case-insensitive) */
